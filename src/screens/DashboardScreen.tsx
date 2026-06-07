@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useAuthStore } from '../store/auth.store'
 import { useWorkspaceStore } from '../store/workspace.store'
-import AddTransactionModal from '../components/AddtransactionModal'
+import AddTransactionModal from '../components/AddTransactionModal'
 import api from '../lib/api'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 

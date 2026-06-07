@@ -1,25 +1,30 @@
 {
   "expo": {
-    "name": "flowledger-mobile",
-    "slug": "flowledger-mobile",
+    "name": "FlowLedger",
+    "slug": "flowledger",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "ios": {
-      "supportsTablet": true
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f1117"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "package": "com.flowledger.app"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "ios": {
+      "bundleIdentifier": "com.flowledger.app"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "caf1557d-d2f5-42d8-9981-210a8f6ab59c"
+      }
     }
   }
 }
