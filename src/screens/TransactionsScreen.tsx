@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react'
+import {  useState, useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
-  View, Text, StyleSheet, FlatList,
-  TouchableOpacity, ActivityIndicator, RefreshControl,
-  TextInput, Alert
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  ActivityIndicator, RefreshControl, TextInput, Alert
 } from 'react-native'
-import { useWorkspaceStore } from '../store/workspace.store'
-import AddTransactionModal from '../components/AddTransactionModal'
-import api from '../lib/api'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useWorkspaceStore } from '../store/workspace.store'
+import api from '../lib/api'
 
 interface Transaction {
   id: string
@@ -16,7 +15,7 @@ interface Transaction {
   date: string
   paymentMethod?: string
   source?: string
-  category?: { name: string; color: string }
+  category?: { name: string; color: string; icon: string }
   type: 'expense' | 'income'
 }
 
@@ -28,22 +27,41 @@ function formatNaira(amount: number) {
   }).format(amount)
 }
 
+function groupByDate(transactions: Transaction[]) {
+  const groups: { date: string; items: Transaction[] }[] = []
+  const map: Record<string, Transaction[]> = {}
+
+  for (const tx of transactions) {
+    const date = new Date(tx.date).toLocaleDateString('en-NG', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    })
+    if (!map[date]) {
+      map[date] = []
+      groups.push({ date, items: map[date] })
+    }
+    map[date].push(tx)
+  }
+  return groups
+}
+
+const TABS = ['All', 'Expenses', 'Income'] as const
+
 export default function TransactionsScreen() {
   const { activeWorkspace } = useWorkspaceStore()
+  const insets = useSafeAreaInsets()
   const [expenses, setExpenses] = useState<Transaction[]>([])
   const [income, setIncome] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'all' | 'expenses' | 'income'>('all')
+  const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All')
   const [search, setSearch] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const insets = useSafeAreaInsets()
-  const fetchData = async () => {
+
+  const fetchData = useCallback(async () => {
     if (!activeWorkspace) return
     try {
       const [expRes, incRes] = await Promise.all([
-        api.get(`/w/${activeWorkspace.id}/expenses?limit=50`),
-        api.get(`/w/${activeWorkspace.id}/income?limit=50`),
+        api.get(`/w/${activeWorkspace.id}/expenses?limit=100`),
+        api.get(`/w/${activeWorkspace.id}/income?limit=100`),
       ])
       setExpenses(expRes.data.items.map((e: any) => ({ ...e, type: 'expense' })))
       setIncome(incRes.data.items.map((i: any) => ({ ...i, type: 'income' })))
@@ -53,14 +71,13 @@ export default function TransactionsScreen() {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [activeWorkspace])
 
-  useEffect(() => { fetchData() }, [activeWorkspace])
-
-  const onRefresh = () => {
-    setRefreshing(true)
+  useFocusEffect(
+  useCallback(() => {
     fetchData()
-  }
+  }, [activeWorkspace])
+)
 
   const handleDelete = (id: string, type: 'expense' | 'income') => {
     Alert.alert('Delete transaction', 'Are you sure?', [
@@ -87,8 +104,16 @@ export default function TransactionsScreen() {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
 
-  const filtered = (activeTab === 'all' ? all : activeTab === 'expenses' ? expenses : income)
-    .filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
+  const filtered = (
+    activeTab === 'All' ? all :
+    activeTab === 'Expenses' ? expenses : income
+  ).filter((t) => t.title.toLowerCase().includes(search.toLowerCase()))
+
+  const grouped = groupByDate(filtered)
+
+  const totalFiltered = filtered.reduce((sum, t) => {
+    return t.type === 'income' ? sum + Number(t.amount) : sum - Number(t.amount)
+  }, 0)
 
   if (loading) {
     return (
@@ -99,92 +124,98 @@ export default function TransactionsScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>Transactions</Text>
-        <Text style={styles.subtitle}>{filtered.length} records</Text>
+        <Text style={[styles.totalAmount, { color: totalFiltered >= 0 ? '#10b981' : '#ef4444' }]}>
+          {totalFiltered >= 0 ? '+' : ''}{formatNaira(totalFiltered)}
+        </Text>
       </View>
 
       {/* Search */}
       <View style={styles.searchRow}>
-        <TextInput
-          style={styles.search}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search transactions..."
-          placeholderTextColor="rgba(255,255,255,0.2)"
-        />
+        <View style={styles.searchBox}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search transactions..."
+            placeholderTextColor="rgba(255,255,255,0.2)"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Text style={styles.searchClear}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Tabs */}
       <View style={styles.tabs}>
-        {(['all', 'expenses', 'income'] as const).map((tab) => (
+        {TABS.map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
+            activeOpacity={0.7}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab}
             </Text>
+            {activeTab === tab && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
         ))}
       </View>
 
       {/* List */}
       <FlatList
-        data={filtered}
-        keyExtractor={(item) => `${item.type}-${item.id}`}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10b981" />}
+        data={grouped}
+        keyExtractor={(item) => item.date}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData() }} tintColor="#10b981" />}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No transactions found</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.txRow}
-            onLongPress={() => handleDelete(item.id, item.type)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.txIcon, { backgroundColor: `${item.category?.color ?? '#6366f1'}20` }]}>
-              <Text style={{ color: item.category?.color ?? '#6366f1', fontSize: 14 }}>
-                {item.title[0].toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.txInfo}>
-              <Text style={styles.txTitle}>{item.title}</Text>
-              <Text style={styles.txCategory}>{item.category?.name ?? 'Uncategorized'}</Text>
-            </View>
-            <View style={styles.txRight}>
-              <Text style={[styles.txAmount, { color: item.type === 'income' ? '#10b981' : '#ef4444' }]}>
-                {item.type === 'income' ? '+' : '-'}{formatNaira(Number(item.amount))}
-              </Text>
-              <Text style={styles.txDate}>
-                {new Date(item.date).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}
-              </Text>
-            </View>
-          </TouchableOpacity>
+        renderItem={({ item: group }) => (
+          <View style={styles.group}>
+            <Text style={styles.groupDate}>{group.date}</Text>
+            {group.items.map((tx) => (
+              <TouchableOpacity
+                key={`${tx.type}-${tx.id}`}
+                style={styles.txRow}
+                onLongPress={() => handleDelete(tx.id, tx.type)}
+                activeOpacity={0.6}
+              >
+                <View style={[styles.txBorder, { backgroundColor: tx.category?.color ?? '#6366f1' }]} />
+                <View style={[styles.txIcon, { backgroundColor: `${tx.category?.color ?? '#6366f1'}18` }]}>
+                  <Text style={{ fontSize: 16 }}>
+                    {tx.category?.icon && tx.category.icon.length <= 2
+                      ? tx.category.icon
+                      : tx.type === 'income' ? '💰' : '💸'}
+                  </Text>
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txTitle} numberOfLines={1}>{tx.title}</Text>
+                  <Text style={styles.txMeta}>
+                    {tx.category?.name ?? 'Uncategorized'}
+                    {tx.paymentMethod ? ` · ${tx.paymentMethod.replace(/_/g, ' ')}` : ''}
+                    {tx.source ? ` · ${tx.source}` : ''}
+                  </Text>
+                </View>
+                <Text style={[styles.txAmount, { color: tx.type === 'income' ? '#10b981' : '#ef4444' }]}>
+                  {tx.type === 'income' ? '+' : '-'}{formatNaira(Number(tx.amount))}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       />
-      {/* Floating button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowModal(true)}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
 
-      <AddTransactionModal
-        visible={showModal}
-        onClose={() => setShowModal(false)}
-        onSuccess={fetchData}
-      />
-
-      {/* Hint */}
-      <Text style={styles.hint}>Long press to delete a transaction</Text>
+      <Text style={styles.hint}>Long press to delete</Text>
     </View>
   )
 }
@@ -192,65 +223,80 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f1117' },
   centered: { flex: 1, backgroundColor: '#0f1117', alignItems: 'center', justifyContent: 'center' },
-  header: { padding: 20, paddingBottom: 12 },
-  title: { color: 'white', fontSize: 22, fontWeight: '600' },
-  subtitle: { color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 2 },
-  searchRow: { paddingHorizontal: 20, marginBottom: 12 },
-  search: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    padding: 12,
-    color: 'white',
-    fontSize: 14,
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  tabs: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 12 },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 8,
+  title: { color: 'white', fontSize: 26, fontWeight: '700', letterSpacing: -0.3 },
+  totalAmount: { fontSize: 15, fontWeight: '600' },
+
+  searchRow: { paddingHorizontal: 20, marginBottom: 16 },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    gap: 8,
   },
-  tabActive: { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: 'rgba(16,185,129,0.3)' },
-  tabText: { color: 'rgba(255,255,255,0.4)', fontSize: 13 },
+  searchIcon: { fontSize: 14 },
+  searchInput: { flex: 1, paddingVertical: 12, color: 'white', fontSize: 14 },
+  searchClear: { color: 'rgba(255,255,255,0.3)', fontSize: 14, padding: 4 },
+
+  tabs: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 8,
+    gap: 4,
+  },
+  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, position: 'relative' },
+  tabActive: { backgroundColor: 'rgba(16,185,129,0.1)' },
+  tabText: { color: 'rgba(255,255,255,0.35)', fontSize: 14, fontWeight: '500' },
   tabTextActive: { color: '#10b981' },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 16,
+    height: 2,
+    backgroundColor: '#10b981',
+    borderRadius: 1,
+  },
+
   list: { paddingHorizontal: 20, paddingBottom: 20 },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { color: 'rgba(255,255,255,0.2)', fontSize: 14 },
+
+  group: { marginBottom: 20 },
+  groupDate: {
+    color: 'rgba(255,255,255,0.25)',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+
   txRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  txIcon: { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  txInfo: { flex: 1 },
-  txTitle: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
-  txCategory: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 2 },
-  txRight: { alignItems: 'flex-end' },
-  txAmount: { fontSize: 14, fontWeight: '500' },
-  txDate: { color: 'rgba(255,255,255,0.2)', fontSize: 11, marginTop: 2 },
+  txBorder: { width: 3, height: 36, borderRadius: 2, flexShrink: 0 },
+  txIcon: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  txInfo: { flex: 1, minWidth: 0 },
+  txTitle: { color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '500' },
+  txMeta: { color: 'rgba(255,255,255,0.25)', fontSize: 12, marginTop: 2 },
+  txAmount: { fontSize: 14, fontWeight: '600', flexShrink: 0 },
+
   hint: { color: 'rgba(255,255,255,0.1)', fontSize: 11, textAlign: 'center', paddingBottom: 12 },
-  fab: {
-  position: 'absolute',
-  bottom: 60,
-  right: 24,
-  width: 56,
-  height: 56,
-  borderRadius: 28,
-  backgroundColor: '#10b981',
-  alignItems: 'center',
-  justifyContent: 'center',
-  shadowColor: '#10b981',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  elevation: 8,
-},
-fabText: { color: 'white', fontSize: 28, fontWeight: '300', marginTop: -2 },
 })

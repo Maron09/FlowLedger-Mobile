@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useWorkspaceStore } from '../store/workspace.store'
 import api from '../lib/api'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 interface Category {
   id: string
@@ -35,6 +36,7 @@ export default function AddTransactionModal({ visible, onClose, onSuccess }: Pro
     notes: '',
   })
   const [saving, setSaving] = useState(false)
+  const insets = useSafeAreaInsets()
 
   useEffect(() => {
     if (visible && activeWorkspace) {
@@ -97,7 +99,7 @@ export default function AddTransactionModal({ visible, onClose, onSuccess }: Pro
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <View style={[ styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>

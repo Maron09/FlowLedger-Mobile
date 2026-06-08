@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, TextInput, Alert, ActivityIndicator
@@ -8,12 +8,12 @@ import { useWorkspaceStore } from '../store/workspace.store'
 import api from '../lib/api'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }: any) {
   const { user, setAuth, logout } = useAuthStore()
   const { activeWorkspace, workspaces, reset } = useWorkspaceStore()
   const [activeSection, setActiveSection] = useState<'profile' | 'password' | null>(null)
   const insets = useSafeAreaInsets()
+  const [switching, setSwitching] = useState(false)
 
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName ?? '',
@@ -84,7 +84,10 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[ styles.content, { paddingTop: insets.top + 20 }]}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
       </View>
@@ -110,7 +113,10 @@ export default function SettingsScreen() {
         </View>
       )}
 
+      
+
       {/* Profile section */}
+      <Text style={styles.groupLabel}>Account</Text>
       <View style={styles.section}>
         <TouchableOpacity
           style={styles.sectionHeader}
@@ -119,7 +125,6 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Update profile</Text>
           <Text style={styles.chevron}>{activeSection === 'profile' ? '▲' : '▼'}</Text>
         </TouchableOpacity>
-
         {activeSection === 'profile' && (
           <View style={styles.sectionBody}>
             <View style={styles.field}>
@@ -151,7 +156,6 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* Password section */}
       <View style={styles.section}>
         <TouchableOpacity
           style={styles.sectionHeader}
@@ -160,7 +164,6 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Change password</Text>
           <Text style={styles.chevron}>{activeSection === 'password' ? '▲' : '▼'}</Text>
         </TouchableOpacity>
-
         {activeSection === 'password' && (
           <View style={styles.sectionBody}>
             <View style={styles.field}>
@@ -207,26 +210,61 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* Workspace info */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Active workspace</Text>
+      {/* Workspace switcher */}
+<Text style={styles.groupLabel}>Workspace</Text>
+<View style={styles.section}>
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>Your workspaces</Text>
+  </View>
+  <View style={styles.sectionBody}>
+    {workspaces.map((ws) => (
+      <TouchableOpacity
+        key={ws.id}
+        style={[
+          styles.wsRow,
+          ws.id === activeWorkspace?.id && styles.wsRowActive,
+        ]}
+        onPress={async () => {
+          if (ws.id === activeWorkspace?.id || switching) return
+          setSwitching(true)
+          try {
+            await api.post(`/workspaces/${ws.id}/switch`)
+            const { setActiveWorkspace } = useWorkspaceStore.getState()
+            setActiveWorkspace(ws)
+          } catch (err) {
+            Alert.alert('Error', 'Failed to switch workspace')
+          } finally {
+            setSwitching(false)
+          }
+        }}
+      >
+        <View style={[
+          styles.wsIcon,
+          {
+            backgroundColor: ws.type === 'BUSINESS'
+              ? 'rgba(59,130,246,0.2)'
+              : 'rgba(16,185,129,0.2)'
+          }
+        ]}>
+          <Text style={{
+            color: ws.type === 'BUSINESS' ? '#3b82f6' : '#10b981',
+            fontWeight: '600',
+            fontSize: 14,
+          }}>
+            {ws.name[0].toUpperCase()}
+          </Text>
         </View>
-        <View style={styles.sectionBody}>
-          <View style={styles.wsRow}>
-            <View style={[styles.wsIcon, { backgroundColor: activeWorkspace?.type === 'BUSINESS' ? 'rgba(59,130,246,0.2)' : 'rgba(16,185,129,0.2)' }]}>
-              <Text style={{ color: activeWorkspace?.type === 'BUSINESS' ? '#3b82f6' : '#10b981', fontWeight: '600' }}>
-                {activeWorkspace?.name[0].toUpperCase()}
-              </Text>
-            </View>
-            <View>
-              <Text style={styles.wsName}>{activeWorkspace?.name}</Text>
-              <Text style={styles.wsType}>{activeWorkspace?.type?.toLowerCase()}</Text>
-            </View>
-          </View>
-          <Text style={styles.wsHint}>{workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''} total</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.wsName}>{ws.name}</Text>
+          <Text style={styles.wsType}>{ws.type.toLowerCase()}</Text>
         </View>
-      </View>
+        {ws.id === activeWorkspace?.id && (
+          <View style={styles.wsActiveDot} />
+        )}
+      </TouchableOpacity>
+    ))}
+  </View>
+</View>
 
       {/* Sign out */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -252,7 +290,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   avatar: {
     width: 48,
@@ -274,6 +312,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   successText: { color: '#10b981', fontSize: 14 },
+  groupLabel: {
+    color: 'rgba(255,255,255,0.3)',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  menuGroup: {
+    backgroundColor: '#0a0d12',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  menuRowText: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
+  menuChevron: { color: 'rgba(255,255,255,0.3)', fontSize: 20 },
+  menuDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 16 },
   section: {
     backgroundColor: '#0a0d12',
     borderRadius: 14,
@@ -290,11 +353,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '500' },
   chevron: { color: 'rgba(255,255,255,0.3)', fontSize: 12 },
-  sectionBody: {
-    padding: 16,
-    paddingTop: 0,
-    gap: 12,
-  },
+  sectionBody: { padding: 16, paddingTop: 0, gap: 12 },
   field: { gap: 6 },
   label: { color: 'rgba(255,255,255,0.4)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8 },
   input: {
@@ -306,16 +365,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
   },
-  button: {
-    backgroundColor: '#10b981',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 4,
-  },
+  button: { backgroundColor: '#10b981', borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 4 },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: 'white', fontSize: 14, fontWeight: '600' },
-  wsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  wsRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+  paddingVertical: 8,
+  borderRadius: 8,
+  paddingHorizontal: 4,
+},
   wsIcon: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   wsName: { color: 'rgba(255,255,255,0.7)', fontSize: 14 },
   wsType: { color: 'rgba(255,255,255,0.3)', fontSize: 12, textTransform: 'capitalize', marginTop: 2 },
@@ -332,4 +392,13 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#ef4444', fontSize: 14, fontWeight: '600' },
   version: { color: 'rgba(255,255,255,0.1)', fontSize: 12, textAlign: 'center' },
+  wsRowActive: {
+  backgroundColor: 'rgba(16,185,129,0.05)',
+},
+wsActiveDot: {
+  width: 8,
+  height: 8,
+  borderRadius: 4,
+  backgroundColor: '#10b981',
+},
 })

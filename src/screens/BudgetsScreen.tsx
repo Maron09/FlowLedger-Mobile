@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import {  useState } from 'react'
+import { useCallback } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, RefreshControl
+  ActivityIndicator, RefreshControl, TouchableOpacity
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useWorkspaceStore } from '../store/workspace.store'
 import api from '../lib/api'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
+import AddBudgetModal from '../components/AddBudgetModal'
 
 interface BudgetStatus {
   budget: {
@@ -36,10 +38,11 @@ function statusColor(status: string) {
 
 export default function BudgetsScreen() {
   const { activeWorkspace } = useWorkspaceStore()
+  const insets = useSafeAreaInsets()
   const [budgets, setBudgets] = useState<BudgetStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const insets = useSafeAreaInsets()
+  const [showModal, setShowModal] = useState(false)
 
   const fetchData = async () => {
     if (!activeWorkspace) return
@@ -54,12 +57,11 @@ export default function BudgetsScreen() {
     }
   }
 
-  useEffect(() => { fetchData() }, [activeWorkspace])
-
-  const onRefresh = () => {
-    setRefreshing(true)
+  useFocusEffect(
+  useCallback(() => {
     fetchData()
-  }
+  }, [activeWorkspace])
+)
 
   if (loading) {
     return (
@@ -70,78 +72,95 @@ export default function BudgetsScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[  styles.content, { paddingTop: insets.top + 20 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10b981" />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Budgets</Text>
-        <Text style={styles.subtitle}>Monthly spending limits</Text>
-      </View>
-
-      {budgets.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>No budgets set</Text>
-          <Text style={styles.emptyHint}>Set budgets on the web app</Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData() }} tintColor="#10b981" />}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Budgets</Text>
+            <Text style={styles.subtitle}>Monthly spending limits</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setShowModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.addBtnText}>+ New</Text>
+          </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.list}>
-          {budgets.map((bs) => {
-            const { budget, spent, remaining, percentage, status } = bs
-            const color = statusColor(status)
-            return (
-              <View key={budget.id} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardLeft}>
-                    <View style={[styles.catIcon, { backgroundColor: `${budget.category.color}20` }]}>
-                      <Text style={{ color: budget.category.color, fontSize: 14, fontWeight: '600' }}>
-                        {budget.category.name[0].toUpperCase()}
+
+        {budgets.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>No budgets yet</Text>
+            <Text style={styles.emptyHint}>Tap + New to create your first budget</Text>
+          </View>
+        ) : (
+          <View style={styles.list}>
+            {budgets.map((bs) => {
+              const { budget, spent, remaining, percentage, status } = bs
+              const color = statusColor(status)
+              return (
+                <View key={budget.id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardLeft}>
+                      <View style={[styles.catIcon, { backgroundColor: `${budget.category.color}20` }]}>
+                        <Text style={{ color: budget.category.color, fontSize: 14, fontWeight: '600' }}>
+                          {budget.category.name[0].toUpperCase()}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={styles.catName}>{budget.category.name}</Text>
+                        <Text style={styles.catPeriod}>Monthly budget</Text>
+                      </View>
+                    </View>
+                    <View style={styles.cardRight}>
+                      <Text style={styles.amounts}>
+                        {formatNaira(spent)}{' '}
+                        <Text style={styles.amountOf}>/ {formatNaira(Number(budget.amount))}</Text>
+                      </Text>
+                      <Text style={[styles.remaining, { color }]}>
+                        {status === 'over'
+                          ? `${formatNaira(Math.abs(remaining))} over`
+                          : `${formatNaira(remaining)} left`}
                       </Text>
                     </View>
-                    <View>
-                      <Text style={styles.catName}>{budget.category.name}</Text>
-                      <Text style={styles.catPeriod}>Monthly budget</Text>
-                    </View>
                   </View>
-                  <View style={styles.cardRight}>
-                    <Text style={styles.amounts}>
-                      {formatNaira(spent)}{' '}
-                      <Text style={styles.amountOf}>/ {formatNaira(Number(budget.amount))}</Text>
-                    </Text>
-                    <Text style={[styles.remaining, { color }]}>
-                      {status === 'over'
-                        ? `${formatNaira(Math.abs(remaining))} over`
-                        : `${formatNaira(remaining)} left`}
-                    </Text>
-                  </View>
-                </View>
 
-                {/* Progress bar */}
-                <View style={styles.progressTrack}>
-                  <View
-                    style={[
+                  <View style={styles.progressTrack}>
+                    <View style={[
                       styles.progressFill,
                       {
                         width: `${Math.min(percentage, 100)}%` as any,
                         backgroundColor: color,
                       },
-                    ]}
-                  />
-                </View>
+                    ]} />
+                  </View>
 
-                <View style={styles.progressLabels}>
-                  <Text style={styles.progressLabel}>0%</Text>
-                  <Text style={[styles.progressLabel, { color }]}>
-                    {percentage.toFixed(0)}%
-                  </Text>
+                  <View style={styles.progressLabels}>
+                    <Text style={styles.progressLabel}>0%</Text>
+                    <Text style={[styles.progressLabel, { color }]}>
+                      {percentage.toFixed(0)}%
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            )
-          })}
-        </View>
-      )}
-    </ScrollView>
+              )
+            })}
+          </View>
+        )}
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
+
+      <AddBudgetModal
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        onSuccess={fetchData}
+      />
+    </>
   )
 }
 
@@ -149,19 +168,31 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f1117' },
   content: { padding: 20, paddingBottom: 40 },
   centered: { flex: 1, backgroundColor: '#0f1117', alignItems: 'center', justifyContent: 'center' },
-  header: { marginBottom: 20 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   title: { color: 'white', fontSize: 22, fontWeight: '600' },
   subtitle: { color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 2 },
+  addBtn: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addBtnText: { color: 'white', fontSize: 13, fontWeight: '600' },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { color: 'rgba(255,255,255,0.2)', fontSize: 15 },
   emptyHint: { color: 'rgba(255,255,255,0.1)', fontSize: 13, marginTop: 6 },
   list: { gap: 12 },
   card: {
-    backgroundColor: '#0a0d12',
+    backgroundColor: '#0d1117',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
