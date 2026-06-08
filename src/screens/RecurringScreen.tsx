@@ -7,7 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useWorkspaceStore } from '../store/workspace.store'
 import api from '../lib/api'
-import AddTransactionModal from '../components/AddtransactionModal'
+import AddTransactionModal from '../components/AddTransactionModal'
 
 interface Transaction {
   id: string
