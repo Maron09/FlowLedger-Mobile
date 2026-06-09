@@ -151,17 +151,17 @@ function AppNavigator() {
   }
 
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
-      <AppStack.Screen name='Analytics' component={AnalyticsScreen} />
-      <AppStack.Screen name="Tabs" component={MainTabs} />
-      <AppStack.Screen name="Categories" component={CategoriesScreen} />
-      <AppStack.Screen name="Tax" component={TaxScreen} />
-      <AppStack.Screen name="AiChat" component={AiChatScreen} />
-      <AppStack.Screen name="TeamMembers" component={TeamMembersScreen} />
-      <AppStack.Screen name="Recurring" component={RecurringScreen} />
-      <AppStack.Screen name="Budgets" component={BudgetsScreen} />
-    </AppStack.Navigator>
-  )
+  <AppStack.Navigator screenOptions={{ headerShown: false }}>
+    <AppStack.Screen name="Tabs" component={MainTabs} />
+    <AppStack.Screen name="Analytics" component={AnalyticsScreen} />
+    <AppStack.Screen name="Categories" component={CategoriesScreen} />
+    <AppStack.Screen name="Tax" component={TaxScreen} />
+    <AppStack.Screen name="AiChat" component={AiChatScreen} />
+    <AppStack.Screen name="TeamMembers" component={TeamMembersScreen} />
+    <AppStack.Screen name="Recurring" component={RecurringScreen} />
+    <AppStack.Screen name="Budgets" component={BudgetsScreen} />
+  </AppStack.Navigator>
+)
 }
 
 export default function App() {

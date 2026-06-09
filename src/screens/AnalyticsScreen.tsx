@@ -55,7 +55,7 @@ function getLast6Months() {
 
 const SOURCE_COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4']
 
-export default function AnalyticsScreen() {
+export default function AnalyticsScreen({navigation}: any) {
   const { activeWorkspace } = useWorkspaceStore()
   const insets = useSafeAreaInsets()
   const months = getLast6Months()
@@ -112,9 +112,12 @@ export default function AnalyticsScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Analytics</Text>
-        <Text style={styles.subtitle}>Financial overview</Text>
-      </View>
+    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <Text style={styles.backText}>‹ Back</Text>
+    </TouchableOpacity>
+    <Text style={styles.title}>Analytics</Text>
+    <Text style={styles.subtitle}>Financial overview</Text>
+    </View>
 
       {/* Month selector */}
       <ScrollView
@@ -344,4 +347,6 @@ const styles = StyleSheet.create({
   categoryPct: { color: 'rgba(255,255,255,0.25)', fontSize: 12, width: 30, textAlign: 'right' },
   sourceBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', marginTop: 6 },
   sourceBarFill: { height: '100%', borderRadius: 2 },
+  backBtn: { marginBottom: 8 },
+backText: { color: '#10b981', fontSize: 16 },
 })
