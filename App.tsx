@@ -140,6 +140,33 @@ function MainTabs() {
 
 function AppNavigator() {
   const { workspaces, workspacesLoaded } = useWorkspaceStore()
+  const notificationListener = useRef<any>()
+  const responseListener = useRef<any>()
+
+  useEffect(() => {
+    // Register for push notifications after user is authenticated
+    registerForPushNotifications().then((token) => {
+      if (token) {
+        console.log('Push token:', token)
+        savePushToken(token)
+      } else {
+        console.log('No push token received')
+      }
+    })
+
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('Notification received:', notification)
+    })
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log('Notification tapped:', response)
+    })
+
+    return () => {
+      notificationListener.current?.remove()
+      responseListener.current?.remove()
+    }
+  }, [])
 
   if (!workspacesLoaded) {
     return (
@@ -154,18 +181,18 @@ function AppNavigator() {
   }
 
   return (
-  <AppStack.Navigator screenOptions={{ headerShown: false }}>
-    <AppStack.Screen name="Tabs" component={MainTabs} />
-    <AppStack.Screen name="Analytics" component={AnalyticsScreen} />
-    <AppStack.Screen name="Categories" component={CategoriesScreen} />
-    <AppStack.Screen name="Tax" component={TaxScreen} />
-    <AppStack.Screen name="AiChat" component={AiChatScreen} />
-    <AppStack.Screen name="TeamMembers" component={TeamMembersScreen} />
-    <AppStack.Screen name="Recurring" component={RecurringScreen} />
-    <AppStack.Screen name="Budgets" component={BudgetsScreen} />
-    <AppStack.Screen name="Portfolio" component={PortfolioScreen} />
-  </AppStack.Navigator>
-)
+    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+      <AppStack.Screen name="Tabs" component={MainTabs} />
+      <AppStack.Screen name="Analytics" component={AnalyticsScreen} />
+      <AppStack.Screen name="Categories" component={CategoriesScreen} />
+      <AppStack.Screen name="Tax" component={TaxScreen} />
+      <AppStack.Screen name="AiChat" component={AiChatScreen} />
+      <AppStack.Screen name="TeamMembers" component={TeamMembersScreen} />
+      <AppStack.Screen name="Recurring" component={RecurringScreen} />
+      <AppStack.Screen name="Budgets" component={BudgetsScreen} />
+      <AppStack.Screen name="Portfolio" component={PortfolioScreen} />
+    </AppStack.Navigator>
+  )
 }
 
 export default function App() {
@@ -199,31 +226,6 @@ export default function App() {
       }
     }
     init()
-  }, [])
-
-  const notificationListener = useRef<any>()
-  const responseListener = useRef<any>()
-
-  useEffect(() => {
-    // Register for push notifications
-    registerForPushNotifications().then((token) => {
-      if (token) savePushToken(token)
-    })
-
-    // Listen for incoming notifications
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('Notification received:', notification)
-    })
-
-    // Listen for notification taps
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification tapped:', response)
-    })
-
-    return () => {
-      notificationListener.current?.remove()
-      responseListener.current?.remove()
-    }
   }, [])
 
   if (loading) {
