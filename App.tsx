@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import * as Notifications from 'expo-notifications'
+import { registerForPushNotifications, savePushToken } from './src/lib/notifications'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -197,6 +199,31 @@ export default function App() {
       }
     }
     init()
+  }, [])
+
+  const notificationListener = useRef<any>()
+  const responseListener = useRef<any>()
+
+  useEffect(() => {
+    // Register for push notifications
+    registerForPushNotifications().then((token) => {
+      if (token) savePushToken(token)
+    })
+
+    // Listen for incoming notifications
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('Notification received:', notification)
+    })
+
+    // Listen for notification taps
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log('Notification tapped:', response)
+    })
+
+    return () => {
+      notificationListener.current?.remove()
+      responseListener.current?.remove()
+    }
   }, [])
 
   if (loading) {
