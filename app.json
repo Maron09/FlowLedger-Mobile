@@ -15,7 +15,8 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#0f1117"
       },
-      "package": "com.flowledger.app"
+      "package": "com.flowledger.app",
+      "softwareKeyboardLayoutMode": "pan"
     },
     "ios": {
       "bundleIdentifier": "com.flowledger.app"

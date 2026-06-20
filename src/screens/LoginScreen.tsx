@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/auth.store'
 import { useWorkspaceStore } from '../store/workspace.store'
 import api from '../lib/api'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Ionicons } from '@expo/vector-icons'
 
 export default function LoginScreen({ navigation }: any) {
   const { setAuth } = useAuthStore()
@@ -16,6 +17,7 @@ export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -41,11 +43,12 @@ export default function LoginScreen({ navigation }: any) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={[ styles.scroll, { paddingTop: insets.top + 20 }]} keyboardShouldPersistTaps="handled">
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+      <ScrollView contentContainerStyle={[ styles.scroll, { paddingTop: insets.top + 20 }]} keyboardShouldPersistTaps="handled" style= {{backgroundColor: '#0f1117'}}>
         {/* Logo */}
         <View style={styles.logoRow}>
           <View style={styles.logoBox}>
@@ -74,14 +77,29 @@ export default function LoginScreen({ navigation }: any) {
 
           <View style={styles.field}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
+            <View style={styles.inputRow}>
+              <TextInput
+              style={styles.inputFlex}
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
               placeholderTextColor="rgba(255,255,255,0.2)"
-              secureTextEntry
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={18}
+                color="rgba(255,255,255,0.3)"
+              />
+            </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -112,7 +130,8 @@ export default function LoginScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   )
 }
 
@@ -125,6 +144,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
+    backgroundColor: '#0f1117',
   },
   logoRow: {
     flexDirection: 'row',
@@ -210,5 +230,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   forgotLink: { alignItems: 'center', marginTop: 4 },
-forgotText: { color: 'rgba(255,255,255,0.3)', fontSize: 13 },
+  forgotText: { color: 'rgba(255,255,255,0.3)', fontSize: 13 },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+  },
+  inputFlex: {
+    flex: 1,
+    padding: 14,
+    color: 'white',
+    fontSize: 15,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
 })

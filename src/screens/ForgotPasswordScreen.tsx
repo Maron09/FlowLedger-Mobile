@@ -28,11 +28,12 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   }
 
   return (
+    <View style={styles.container}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" style= {{backgroundColor: '#0f1117'}}>
         {/* Logo */}
         <View style={styles.logoRow}>
           <View style={styles.logoBox}>
@@ -102,12 +103,13 @@ export default function ForgotPasswordScreen({ navigation }: any) {
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f1117' },
-  scroll: { flexGrow: 1, padding: 24, justifyContent: 'center' },
+  scroll: { flexGrow: 1, padding: 24, justifyContent: 'center', backgroundColor: '#0f1117' },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 40 },
   logoBox: { width: 36, height: 36, backgroundColor: '#10b981', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   logoIcon: { color: 'white', fontSize: 18, fontWeight: 'bold' },

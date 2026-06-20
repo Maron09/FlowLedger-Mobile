@@ -10,6 +10,7 @@ const MENU_ITEMS = [
   { icon: '🧾', label: 'Tax estimation', screen: 'Tax', desc: 'NTA 2025 tax calculator' },
   { icon: '🤖', label: 'AI Assistant', screen: 'AiChat', desc: 'Ask about your finances' },
   { icon: '👥', label: 'Team members', screen: 'TeamMembers', desc: 'Invite and manage members' },
+  { icon: '📈', label: 'Portfolio', screen: 'Portfolio', desc: 'Track your investments' },
 ]
 
 export default function MoreScreen({ navigation }: any) {

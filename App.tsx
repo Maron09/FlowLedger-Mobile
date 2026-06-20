@@ -26,6 +26,7 @@ import TeamMembersScreen from './src/screens/TeamMembersScreen'
 import RecurringScreen from './src/screens/RecurringScreen'
 import BudgetsScreen from './src/screens/BudgetsScreen'
 import MoreScreen from './src/screens/MoreScreen'
+import PortfolioScreen from './src/screens/PortfolioScreen'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -160,6 +161,7 @@ function AppNavigator() {
     <AppStack.Screen name="TeamMembers" component={TeamMembersScreen} />
     <AppStack.Screen name="Recurring" component={RecurringScreen} />
     <AppStack.Screen name="Budgets" component={BudgetsScreen} />
+    <AppStack.Screen name="Portfolio" component={PortfolioScreen} />
   </AppStack.Navigator>
 )
 }
